@@ -95,3 +95,17 @@ export async function appendExtendedVocab(newWords) {
 export async function clearExtendedVocab() {
   await del('extendedVocab');
 }
+
+// API Settings — persisted so users don't re-enter after restart
+export async function getSettings() {
+  return (await get('apiSettings')) || {};
+}
+
+export async function saveSettings(settings) {
+  await set('apiSettings', settings);
+}
+
+export async function hasApiKey() {
+  const s = await getSettings();
+  return Boolean(s.apiKey && s.apiKey.trim().length > 0);
+}

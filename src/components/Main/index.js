@@ -30,7 +30,7 @@ const DIFFICULTY_OPTIONS = [
 ];
 
 // errorMsg / onError come from App (persist across loading cycles)
-const Main = ({ onStart, onStartLoading, onError, errorMsg, onReview, onVocabManager }) => {
+const Main = ({ onStart, onStartLoading, onError, errorMsg, onReview, onVocabManager, onSettings }) => {
   const [mode,       setMode]       = useState('quiz');
   const [themes,     setThemes]     = useState(['business']);
   const [count,      setCount]      = useState(10);
@@ -122,9 +122,19 @@ const Main = ({ onStart, onStartLoading, onError, errorMsg, onReview, onVocabMan
 
   return (
     <div className="app-shell">
-      <div className="home-logo">
-        <h1>TOEIC Drill</h1>
-        <p>AI-powered practice · 多益備考</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: 32 }}>
+        <div className="home-logo" style={{ padding: 0, textAlign: 'left' }}>
+          <h1>TOEIC Drill</h1>
+          <p>AI-powered practice · 多益備考</p>
+        </div>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={onSettings}
+          style={{ marginTop: 8, fontSize: 18, padding: '4px 10px' }}
+          title="Settings"
+        >
+          ⚙
+        </button>
       </div>
 
       {errorMsg && (

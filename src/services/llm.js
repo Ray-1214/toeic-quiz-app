@@ -1,7 +1,9 @@
-// CRA replaces REACT_APP_* at build time; fallbacks let the packaged app still work
-const LLM_API_BASE = process.env.REACT_APP_LLM_BASE_URL || 'https://api.ithu.tw/v1';
-const LLM_API_KEY  = process.env.REACT_APP_LLM_API_KEY  || '';
-const LLM_MODEL    = process.env.REACT_APP_LLM_MODEL    || 'gpt-oss-120b';
+import { getSettings } from './storage';
+
+// Static fallbacks (used in browser-only mode; Electron reads live settings from store per call)
+const LLM_API_BASE_DEFAULT = process.env.REACT_APP_LLM_BASE_URL || 'https://api.ithu.tw/v1';
+const LLM_API_KEY_DEFAULT  = process.env.REACT_APP_LLM_API_KEY  || '';
+const LLM_MODEL_DEFAULT    = process.env.REACT_APP_LLM_MODEL    || 'gpt-oss-120b';
 
 const SYSTEM_PROMPT_BASE = `You are an expert TOEIC test designer with 20 years of experience.
 You create authentic TOEIC-style questions that match the actual exam format and vocabulary level.
@@ -28,16 +30,23 @@ const THEMES_LABEL = {
 
 async function callLLM(systemPrompt, userPrompt) {
   if (window.electronAPI) {
+    // Electron: main process reads live settings from electron-store each call
     return window.electronAPI.llmChat({ systemPrompt, userPrompt });
   }
-  const res = await fetch(`${LLM_API_BASE}/chat/completions`, {
+  // Browser fallback: read settings dynamically so changes take effect immediately
+  const stored  = await getSettings();
+  const apiBase = stored.apiBase || LLM_API_BASE_DEFAULT;
+  const apiKey  = stored.apiKey  || LLM_API_KEY_DEFAULT;
+  const model   = stored.model   || LLM_MODEL_DEFAULT;
+
+  const res = await fetch(`${apiBase}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${LLM_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: LLM_MODEL,
+      model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Main from '../Main';
 import Quiz from '../Quiz';
 import Part6Quiz from '../Part6Quiz';
@@ -7,17 +7,32 @@ import WordDrill from '../WordDrill';
 import Result from '../Result';
 import Review from '../Review';
 import VocabManager from '../VocabManager';
+import Settings from '../Settings';
 import Loader from '../Loader';
+import { hasApiKey } from '../../services/storage';
 
-// screen: 'home' | 'quiz' | 'part6' | 'part7' | 'vocab' | 'result' | 'review'
+// screen: 'loading' | 'settings' | 'home' | 'quiz' | 'part6' | 'part7' | 'vocab' | 'result' | 'review' | 'vocabmanager'
 const App = () => {
-  const [screen, setScreen] = useState('home');
-  const [loading, setLoading] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState('Generating questions…');
-  const [homeError, setHomeError] = useState(null); // persists across loading cycles
-  const [quizData, setQuizData] = useState(null);
-  const [resultData, setResultData] = useState(null);
-  const [quizConfig, setQuizConfig] = useState(null);
+  const [screen,      setScreen]      = useState('loading');
+  const [isFirstLaunch, setIsFirst]   = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [loadingMsg,  setLoadingMsg]  = useState('Generating questions…');
+  const [homeError,   setHomeError]   = useState(null);
+  const [quizData,    setQuizData]    = useState(null);
+  const [resultData,  setResultData]  = useState(null);
+  const [quizConfig,  setQuizConfig]  = useState(null);
+
+  // On mount: check if API key is configured
+  useEffect(() => {
+    hasApiKey().then(ok => {
+      if (!ok) {
+        setIsFirst(true);
+        setScreen('settings');
+      } else {
+        setScreen('home');
+      }
+    });
+  }, []);
 
   const startLoading = (msg = 'Generating questions…') => {
     setHomeError(null);
@@ -51,8 +66,15 @@ const App = () => {
     setLoading(false);
   };
 
-  if (loading) return <Loader message={loadingMsg} />;
+  if (screen === 'loading') return <Loader message="Starting…" />;
+  if (loading)              return <Loader message={loadingMsg} />;
 
+  if (screen === 'settings') return (
+    <Settings
+      onHome={() => { setIsFirst(false); setScreen('home'); }}
+      isFirstLaunch={isFirstLaunch}
+    />
+  );
   if (screen === 'home') return (
     <Main
       onStart={beginQuiz}
@@ -61,13 +83,14 @@ const App = () => {
       errorMsg={homeError}
       onReview={() => setScreen('review')}
       onVocabManager={() => setScreen('vocabmanager')}
+      onSettings={() => setScreen('settings')}
     />
   );
-  if (screen === 'quiz') return <Quiz data={quizData} config={quizConfig} onFinish={finishQuiz} onHome={goHome} />;
-  if (screen === 'part6') return <Part6Quiz data={quizData} config={quizConfig} onFinish={finishQuiz} onHome={goHome} />;
-  if (screen === 'part7') return <Part7Quiz data={quizData} config={quizConfig} onFinish={finishQuiz} onHome={goHome} />;
-  if (screen === 'vocab') return <WordDrill data={quizData} config={quizConfig} onFinish={finishQuiz} onHome={goHome} />;
-  if (screen === 'result') return (
+  if (screen === 'quiz')    return <Quiz      data={quizData} config={quizConfig} onFinish={finishQuiz} onHome={goHome} />;
+  if (screen === 'part6')   return <Part6Quiz data={quizData} config={quizConfig} onFinish={finishQuiz} onHome={goHome} />;
+  if (screen === 'part7')   return <Part7Quiz data={quizData} config={quizConfig} onFinish={finishQuiz} onHome={goHome} />;
+  if (screen === 'vocab')   return <WordDrill data={quizData} config={quizConfig} onFinish={finishQuiz} onHome={goHome} />;
+  if (screen === 'result')  return (
     <Result
       data={resultData}
       onHome={goHome}
@@ -75,7 +98,7 @@ const App = () => {
       onRetry={() => setScreen(resultData.mode)}
     />
   );
-  if (screen === 'review')       return <Review onHome={goHome} />;
+  if (screen === 'review')       return <Review       onHome={goHome} />;
   if (screen === 'vocabmanager') return <VocabManager onHome={goHome} />;
 
   return null;

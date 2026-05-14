@@ -5,17 +5,13 @@ const isDev = require('electron-is-dev');
 const Store = require('electron-store');
 const { OpenAI } = require('openai');
 
-// Load .env in development (CRA handles REACT_APP_* for renderer; this handles main process)
-if (isDev) {
-  try {
-    require('dotenv').config({ path: path.join(__dirname, '../.env') });
-  } catch (_) {}
-}
+// Load .env if present (works in dev; in packaged app falls back to hardcoded values)
+try { require('dotenv').config({ path: path.join(__dirname, '../.env') }); } catch (_) {}
 
 const store = new Store({ name: 'toeic-drill-data' });
 
 const LLM_BASE_URL = process.env.REACT_APP_LLM_BASE_URL || 'https://api.ithu.tw/v1';
-const LLM_API_KEY  = process.env.REACT_APP_LLM_API_KEY  || '';
+const LLM_API_KEY  = process.env.REACT_APP_LLM_API_KEY  || 'sk-xQ7ZVt_KVcRUO3lvN9J6Rg';
 const LLM_MODEL    = process.env.REACT_APP_LLM_MODEL    || 'gpt-oss-120b';
 
 const client = new OpenAI({ baseURL: LLM_BASE_URL, apiKey: LLM_API_KEY });
@@ -49,9 +45,16 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
 // ── IPC: LLM ─────────────────────────────────────────────────────────────────
+// Read settings fresh each call so changes in the Settings page take effect immediately
 ipcMain.handle('llm:chat', async (_event, { systemPrompt, userPrompt }) => {
-  const res = await client.chat.completions.create({
-    model: LLM_MODEL,
+  const s       = store.get('apiSettings') || {};
+  const apiBase = s.apiBase || LLM_BASE_URL;
+  const apiKey  = s.apiKey  || LLM_API_KEY;
+  const model   = s.model   || LLM_MODEL;
+
+  const c = new OpenAI({ baseURL: apiBase, apiKey });
+  const res = await c.chat.completions.create({
+    model,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user',   content: userPrompt },
