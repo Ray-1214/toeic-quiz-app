@@ -6,15 +6,18 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
@@ -30,22 +33,32 @@ jobs:
           REACT_APP_LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           REACT_APP_LLM_MODEL: ${{ secrets.LLM_MODEL }}
 
-      - name: Package Electron app (NSIS installer)
+      - name: Package Electron app
         run: npx electron-builder --win --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: List dist output
         run: Get-ChildItem dist -Recurse -Name
 
-      - name: Upload Setup.exe to Release
-        uses: softprops/action-gh-release@v2
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.ref_name }}
+          name: TOEIC Drill ${{ github.ref_name }}
+          body: |
+            ## TOEIC Drill ${{ github.ref_name }} — Windows x64
+
+            **使用方式**
+            1. 下載 `TOEIC Drill Setup.exe` 安裝（或下載 portable .exe 直接執行）
+            2. 首次啟動填入 API 設定（Base URL、API Key、Model）
+            3. 開始刷題
+
+            **內建詞彙：6046 個**（CEEC 高中英文詞彙表 Level 1-6 + TOEIC 商業詞彙）
+            **出題模式：** Part 5 / Part 6 / Part 7 / Vocab Drill
+            **其他功能：** 錯題本、Anki 匯出、Vocab Bank 擴充
           files: |
             dist/*.exe
-            dist/*.zip
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: false
-          generate_release_notes: true
